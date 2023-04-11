@@ -1,6 +1,6 @@
 # LAB1 
 
-This is a java realization of the MapReduce frame. 
+This is a java toy of the MapReduce frame. 
 
 The course "MIT 6.824" is available on youtube. https://www.youtube.com/@6.824/videos
 
@@ -64,7 +64,7 @@ public Map<String, Integer> call() {
     }
 ```
 
-## Worker 
+## MapReduce.Worker 
 
 利用线程池模拟Map的分布式操作并保存其中间结果。
 

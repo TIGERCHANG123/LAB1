@@ -1,3 +1,5 @@
+package MapReduce;
+
 import MapReduce.MapFunc;
 import MapReduce.ReduceFunc;
 
