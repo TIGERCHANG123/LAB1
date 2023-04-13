@@ -11,15 +11,15 @@ public class Main {
     public static void main(String[] args) throws MalformedURLException, NotBoundException, RemoteException {
         LocateRegistry.createRegistry(1099);
         try {
-            Master master = new Master();
+            MasterService master = new Master();
             Naming.bind("rmi://127.0.0.1/master", master);
         } catch (RemoteException | AlreadyBoundException | MalformedURLException e) {
             throw new RuntimeException(e);
         }
         for (int i = 0; i < 30; i ++) {
             try {
-                Chunk chunk = new Chunk("chunk_" + i);
-                Naming.bind("rmi://127.0.0.1/chunk_" + i, chunk);
+                ChunkServer chunkServer = new ChunkServer("chunk_" + i);
+                Naming.bind("rmi://127.0.0.1/chunk_" + i, chunkServer);
                 MasterService master = (MasterService) Naming.lookup("rmi://127.0.0.1/master");
                 master.registerChunk("rmi://127.0.0.1/chunk_" + i, "");
             } catch (RemoteException | AlreadyBoundException | MalformedURLException e) {
