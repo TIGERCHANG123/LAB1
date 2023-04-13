@@ -10,8 +10,8 @@ public interface ChunkService extends Remote {
     public void setLease(int newVersion) throws RemoteException; // 更新版本号
     void upload (String chunkID, String data) throws RemoteException; // 上传文件暂存
     String confirm (String chunkID, long offset)throws RemoteException; // 上传文件确认，持久化
-    String download (String filename, long offset, long length) throws RemoteException;
+    String download (String filename, long offset, long length) throws RemoteException; // 下载文件
     String delete (String filename) throws RemoteException;
     String ping () throws RemoteException;
-
+    void sync (String primary) throws RemoteException; // 将当前的 chunk 同步到 primary
 }

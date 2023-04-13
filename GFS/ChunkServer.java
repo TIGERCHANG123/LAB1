@@ -1,11 +1,10 @@
 package GFS;
 
 import javax.xml.crypto.Data;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.RandomAccessFile;
-import java.io.Writer;
+import java.io.*;
+import java.net.MalformedURLException;
 import java.rmi.Naming;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Date;
@@ -33,9 +32,10 @@ public class ChunkServer extends UnicastRemoteObject implements ChunkService {
         tempData = data;
     }
     public String confirm (String chunkID, long offset) throws RemoteException {
+        String foldername = addr + "/";
         if (role == 1) { // 主服务器
             File f;
-            try (Writer fw = new FileWriter((f = new File(chunkID)))) {
+            try (Writer fw = new FileWriter((f = new File(foldername + chunkID)))) {
                 offset = f.length();
                 if (offset + tempData.length() > 64) {
                     return "data too long. ";
@@ -55,7 +55,7 @@ public class ChunkServer extends UnicastRemoteObject implements ChunkService {
                 throw new RemoteException();
             }
         } else { // 从服务器
-            try (RandomAccessFile rw = new RandomAccessFile(new File(chunkID), "rw")) {
+            try (RandomAccessFile rw = new RandomAccessFile(new File(foldername + chunkID), "rw")) {
                 rw.seek(offset);
                 rw.write(tempData.getBytes());
             } catch (Exception e) {
@@ -86,7 +86,26 @@ public class ChunkServer extends UnicastRemoteObject implements ChunkService {
             throw new RemoteException();
         }
     }
-
+    public void sync (String addr) throws RemoteException {
+        try {
+            ChunkServer primary = (ChunkServer) Naming.lookup(addr);
+            this.lease = primary.lease;
+            // 文件拷贝
+            for (File f : new File(primary.addr).listFiles()) {
+                String primaryFile = primary.addr + "/" + f.getName();
+                String secondaryFile = this.addr + "/" + f.getName();
+                try (InputStream input = new FileInputStream(primaryFile); OutputStream output = new FileOutputStream(secondaryFile)) {
+                    byte[] buf = new byte[1024];
+                    int bytesRead;
+                    while ((bytesRead = input.read(buf)) > 0) {
+                        output.write(buf, 0, bytesRead);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
     public void setAvailable () {
         status = 1;
     }

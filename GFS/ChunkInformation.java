@@ -34,6 +34,9 @@ public class ChunkInformation {
     public void addChunk(String newChunk) {
         chunks.add(newChunk);
     }
+    public void removeChunk(String chunk) {
+        chunks.remove(chunk);
+    }
     public static Builder builder() {
         return new Builder();
     }

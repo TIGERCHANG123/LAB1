@@ -13,10 +13,14 @@ public class Master extends UnicastRemoteObject implements MasterService {
     private final Map<String, ChunkInformation> chunkMap = new HashMap<>(); // chunkID -> chunk information.
 
     public Master() throws RemoteException {
-        new Thread(() -> { // 扫描不可用 chunk servers
+        // 新建守护线程定期检测chunk是否可用
+        Thread chunkPing = new Thread(() -> { // 扫描不可用 chunk servers
             for (List<String> chunkIDs : fileMap.values()) {
                 for (String chunkID : chunkIDs) {
                     ChunkInformation ci = chunkMap.get(chunkID);
+                    List<String> newChunks = new ArrayList<>();
+                    Set<String> unavailableChunks = new HashSet<>();
+                    Iterator<String> ite = unusedChunks.iterator();
                     for (String addr : ci.getChunks()) {
                         try {
                             ChunkServer cs = (ChunkServer) Naming.lookup(addr);
@@ -27,18 +31,39 @@ public class Master extends UnicastRemoteObject implements MasterService {
 
                         } catch (MalformedURLException | NotBoundException | RemoteException e) {
                             if (e instanceof RemoteException) { // 不可用
-                                // 为此 chunkid 分配新的 chunk 并同步数据
 
-                                // 不可用的 chunk 进行垃圾回收
+                                newChunks.add(ite.next());
+
+                                unavailableChunks.add(addr);
                             }
                             System.out.println(e.toString());
                         }
                     }
+                    // 不可用的 chunk 进行垃圾回收
+                    for (String chunk : unavailableChunks) {
+                        ci.removeChunk(chunk);
+                    }
+                    unusedChunks.addAll(unavailableChunks);
+                    // 新的 chunk 同步数据
+                    for (String chunk : newChunks) {
+                        try {
+                            ChunkServer secondary = (ChunkServer) Naming.lookup(chunk);
+                            secondary.sync(ci.getChunks().get(0));
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                    // 休眠
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
-        }).start();
-
-
+        });
+        chunkPing.setDaemon(true); // 设置为守护线程
+        chunkPing.start();
     }
 
     public void requestNewChunk (String filename) throws RemoteException {
